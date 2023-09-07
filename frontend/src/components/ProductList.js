@@ -21,9 +21,24 @@ const ProductList=()=> {
             getProducts(); // Refresh the product list after deletion"
         }
      };
+     const searchHandle = async(event)=>{
+        
+        let key= event.target.value;
+        if(key){
+            let result = await fetch(`http://localhost:5000/search/${key}`);
+            result = await result.json();
+            if(result){
+                setProducts(result);
+            }
+        }else{getProducts();}
+      
+     };
   return (
     <div className='product-list'>
         <h1>Product List</h1>
+        <input type="text" placeholder='Search Product' className="inputBox"
+        onChange={searchHandle}
+         />
         <ul>
             <li>S.no</li>
             <li>Name</li>

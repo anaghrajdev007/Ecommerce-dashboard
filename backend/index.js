@@ -4,6 +4,8 @@ require("./db/config");
 const Users = require("./db/User");
 const app = express();
 const Product = require("./db/Product");
+const Jwt = require('jsonwebtoken');
+const jwtkey = 'e-comm';
 
 app.use(express.json());
 app.use(cors());
@@ -12,14 +14,25 @@ app.post("/register", async (req, res) => {
   let result = await user.save();
   result = result.toObject();
   delete result.password;
-  res.send(result);
+  Jwt.sign({result},jwtkey,{expiresIn:"1h"},(err,token)=>{
+    if (err) {
+      res.send({result:"Bhag Bhosdike,Ghus hi jao insan ke bhitar"})
+    }
+    res.send({result ,auth:token});
+  });
 });
 app.post("/login", async (req, res) => {
   console.log(req.body);
   if (req.body.password && req.body.email) {
     let user = await Users.findOne(req.body).select("-password");
     if (user) {
-      res.send(user);
+      Jwt.sign({user},jwtkey,{expiresIn:"1h"},(err,token)=>{
+        if (err) {
+          res.send({result:"Bhag Bhosdike,Ghus hi jao insan ke bhitar"})
+        }
+        res.send({user,auth:token});
+      });
+      
     } else {
       res.send({ result: "No user found" });
     }

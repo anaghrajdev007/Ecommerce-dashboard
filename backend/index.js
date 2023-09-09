@@ -4,35 +4,34 @@ require("./db/config");
 const Users = require("./db/User");
 const app = express();
 const Product = require("./db/Product");
-const Jwt = require('jsonwebtoken');
-const jwtkey = 'e-comm';
+const Jwt = require("jsonwebtoken");
+const jwtkey = "e-comm";
 
 app.use(express.json());
 app.use(cors());
-app.post("/register", async (req, res) => {
+app.post("/register",  async (req, res) => {
   let user = new Users(req.body);
   let result = await user.save();
   result = result.toObject();
   delete result.password;
-  Jwt.sign({result},jwtkey,{expiresIn:"1h"},(err,token)=>{
+  Jwt.sign({ result }, jwtkey, { expiresIn: "1h" }, (err, token) => {
     if (err) {
-      res.send({result:"Bhag Bhosdike,Ghus hi jao insan ke bhitar"})
+      res.send({ result: "Bhag Bhosdike,Ghus hi jao insan ke bhitar" });
     }
-    res.send({result ,auth:token});
+    res.send({ result, auth: token });
   });
 });
-app.post("/login", async (req, res) => {
+app.post("/login",  async (req, res) => {
   console.log(req.body);
   if (req.body.password && req.body.email) {
     let user = await Users.findOne(req.body).select("-password");
     if (user) {
-      Jwt.sign({user},jwtkey,{expiresIn:"1h"},(err,token)=>{
+      Jwt.sign({ user }, jwtkey, { expiresIn: "1h" }, (err, token) => {
         if (err) {
-          res.send({result:"Bhag Bhosdike,Ghus hi jao insan ke bhitar"})
+          res.send({ result: "Bhag Bhosdike,Ghus hi jao insan ke bhitar" });
         }
-        res.send({user,auth:token});
+        res.send({ user, auth: token });
       });
-      
     } else {
       res.send({ result: "No user found" });
     }
@@ -41,49 +40,64 @@ app.post("/login", async (req, res) => {
   }
 });
 
-app.post('/add-product', async (req, res)=> {
+app.post("/add-product", verifyToken, async (req, res) => {
   let product = new Product(req.body);
   let result = await product.save();
   res.send(result);
 });
-app.get("/products", async(req, res)=>{
+app.get("/products", verifyToken, async (req, res) => {
   let products = await Product.find();
-  if(products.length>0){
+  if (products.length > 0) {
     res.send(products);
-  }else{
-    res.send({result:"Kya re bhikhmangya no result found"});
+  } else {
+    res.send({ result: "Kya re bhikhmangya no result found" });
   }
 });
-app.delete('/product/:id', async(req, res) => {
-  
-  const result = await Product.deleteOne({_id:req.params.id});
+app.delete("/product/:id", verifyToken, async (req, res) => {
+  const result = await Product.deleteOne({ _id: req.params.id });
   res.send(result);
 });
-app.get("/product/:id", async(req, res) => {
-  let result = await Product.findOne({_id:req.params.id});
-  if (result){
+app.get("/product/:id", verifyToken, async (req, res) => {
+  let result = await Product.findOne({ _id: req.params.id });
+  if (result) {
     res.send(result);
   } else {
-    res.send({result:"No Results Found"});
+    res.send({ result: "No Results Found" });
   }
 });
-app.put("/product/:id", async (req, res) => {
+app.put("/product/:id", verifyToken, async (req, res) => {
   let result = await Product.updateOne(
-    {_id:req.params.id},
-    {$set:req.body}
-  )
+    { _id: req.params.id },
+    { $set: req.body }
+  );
   res.send(result);
 });
 
-app.get("/search/:key", async(req, res)=>{
+app.get("/search/:key", verifyToken, async (req, res) => {
   let result = await Product.find({
-    "$or":[
-      {name:{$regex:req.params.key},},
-      {company:{$regex:req.params.key},},
-      {category:{$regex:req.params.key},},
-      {price:{$regex:req.params.key},}
-    ]
+    $or: [
+      { name: { $regex: req.params.key } },
+      { company: { $regex: req.params.key } },
+      { category: { $regex: req.params.key } },
+      { price: { $regex: req.params.key } },
+    ],
   });
   res.send(result);
 });
+//middleware for verifying token at one place
+function verifyToken(req, res, next) {
+  let token = req.headers["authorization"];
+  if (token) {
+    token = token.split(" ")[1];
+    Jwt.verify(token, jwtkey, (err, valid) => {
+      if (err) {
+        res.status(401).send({ result: "Please add token with result" });
+      } else {
+        next();
+      }
+    });
+  } else {
+    res.status(403).send({ result: "Please add token with result" });
+  }
+}
 app.listen(5000);
